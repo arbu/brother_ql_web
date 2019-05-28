@@ -12,7 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 from brother_ql.devicedependent import models, label_type_specs, label_sizes
 from brother_ql.devicedependent import ENDLESS_LABEL, DIE_CUT_LABEL, ROUND_DIE_CUT_LABEL
-from brother_ql import BrotherQLRaster, create_label
+from brother_ql import BrotherQLRaster
+from brother_ql.conversion import convert as label_convert
 from brother_ql.backends import backend_factory, guess_backend
 
 import fontconfig
@@ -61,6 +62,7 @@ def get_label_context(request):
       'threshold': int(d.get('threshold', 70)),
       'align':         d.get('align', 'center'),
       'orientation':   d.get('orientation', 'standard'),
+      'copies':    int(d.get('copies', 1)),
       'margin_top':    float(d.get('margin_top',    24))/100.,
       'margin_bottom': float(d.get('margin_bottom', 45))/100.,
       'margin_left':   float(d.get('margin_left',   35))/100.,
@@ -76,6 +78,9 @@ def get_label_context(request):
         context['font_path'] = CONFIG['FONTS'][font_index][0]
     except KeyError:
         raise LookupError("Couln't find the font")
+
+    if context['copies'] < 1 or context['copies'] > 20:
+        context['copies'] = 1
 
     try:
         width, height = label_type_specs[context['label_size']]['dots_printable']
@@ -182,7 +187,7 @@ def print_text():
         rotate = 'auto'
 
     qlr = BrotherQLRaster(CONFIG['PRINTER']['MODEL'])
-    create_label(qlr, im, context['label_size'], threshold=context['threshold'], cut=True, rotate=rotate)
+    label_convert(qlr, [im] * context['copies'], context['label_size'], threshold=context['threshold'], cut=True, rotate=rotate)
 
     if not DEBUG:
         try:
