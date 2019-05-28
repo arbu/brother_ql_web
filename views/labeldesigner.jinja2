@@ -2,101 +2,142 @@
 
 {% block page_title %}{{ title }}{% endblock %}
 
-{% block jumbotron %}
-  <h1>{{ website['PAGE_TITLE'] }}</h1>
-  <p>{{ website['PAGE_HEADLINE'] }}</p>
-  <!--<p><a class="btn btn-primary btn-lg" href="#" role="button">History of printed labels</a></p>-->
-{% endblock %}
-
 {% block content %}
   <div class="row">
     <div class="col-md-4">
       <fieldset class="form-group">
-        <div class="panel-group" id="accordion">
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              <h4 class="panel-title">
-                <a data-toggle="collapse" data-parent="#accordion" href="#collapse1">
-                <span class="glyphicon glyphicon-file" aria-hidden="true"></span> Label Size</a>
-              </h4>
+        <div class="accordion" id="accordion">
+          <div class="card">
+            <div class="card-header" data-toggle="collapse" data-target="#labelSettings" id="#labelSettingsHead">
+              <h5 class="mb-0">
+                <i class="mr-3 fas fa-file" aria-hidden="true"></i>
+                Label Size
+              </h5>
             </div>
-            <div id="collapse1" class="panel-collapse collapse">
-              <div class="chooser panel-body">
-              <label for="labelSize" style="display: none">Label Size:</label>
-              <select class="form-control" id="labelSize" onChange="preview()">
-                {% for label_size in label_sizes %}<option value="{{label_size[0]}}" {% if label['DEFAULT_SIZE'] == label_size[0] %}selected{% endif %}>{{label_size[1]}}</option>{% endfor %}
-              </select>
-              <label for="orientation" style="margin-top: 10px; margin-bottom: 0">Label Orientation:</label>
-              <div class="radio" style="margin-top: 5px;">
-                <label><input type="radio" onchange="preview()" name="orientation" value="standard" {% if default_orientation == 'standard' %}checked{% endif %}>Standard</label>
-              </div>
-              <div class="radio">
-                <label><input type="radio" onchange="preview()" name="orientation" value="rotated" {% if default_orientation == 'rotated' %}checked{% endif %}>Rotated</label>
-              </div>
+            <div id="labelSettings" class="collapse" aria-labelledby="labelSettingsHead" data-parent="#accordion">
+              <div class="card-body">
+                <div class="form-group">
+                  <label for="labelSize" style="display: none">Label Size:</label>
+                  <select class="form-control" id="labelSize" onChange="preview()">
+                    {% for label_size in label_sizes %}<option value="{{label_size[0]}}" {% if label['DEFAULT_SIZE'] == label_size[0] %}selected{% endif %}>{{label_size[1]}}</option>{% endfor %}
+                  </select>
+                </div>
+                <div class="form-group mb-0">
+                  <label for="orientation" >Text Orientation:</label>
+                  <div class="form-check">
+                    <input type="radio" onchange="preview()" name="orientation" id="orientationStandart" class="pl-2 form-check-input" value="standard" {% if label['DEFAULT_ORIENTATION'] == 'standard' %}checked{% endif %}>
+                    <label for="orientationStandart">along cutting edge</label>
+                  </div>
+                  <div class="form-check">
+                    <input type="radio" onchange="preview()" name="orientation" id="orientationRotated" class="pl-2 form-check-input" value="rotated" {% if label['DEFAULT_ORIENTATION'] == 'rotated' %}checked{% endif %}>
+                    <label for="orientationRotated">along role</label>
+                  </div>
+                </div>
               </div> <!-- class="chooser panel-body" -->
             </div>
           </div>
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              <h4 class="panel-title">
-                <a data-toggle="collapse" data-parent="#accordion" href="#collapse2">
-                  <span class="glyphicon glyphicon-text-size" aria-hidden="true"></span>
-                  Font Settings
-                </a>
-              </h4>
+          <div class="card">
+            <div class="card-header" data-toggle="collapse" data-target="#fontSettings" id="#fontSettingsHead">
+              <h5 class="mb-0">
+                <i class="mr-2 fas fa-text-height" aria-hidden="true"></i>
+                Font Settings
+              </h5>
             </div>
-            <div id="collapse2" class="panel-collapse collapse in">
-              <div class="chooser panel-body">
-              <label for="fontFamily">Font Family:</label>
-              <select class="form-control" id="fontFamily" onChange="updateFontStyles()">
-              </select>
-              <label for="fontStyle">Style:</label>
-              <select class="form-control" id="fontStyle" onChange="preview()">
-              </select>
-              <label for="fontSize" >Font Size:</label>
-              <input id="fontSize" class="form-control" type="number" min="1" value="{{ label['DEFAULT_FONT_SIZE'] }}" onChange="preview()" required>
-              <label for="fontAlign" class="control-label input-group">Font Alignment:</label>
-              <div class="btn-group" data-toggle="buttons">
-                  <label class="btn btn-default">
-                      <input type="radio" name="fontAlign" onchange="preview()" value="left" aria-label="Left Align"><span class="glyphicon glyphicon-align-left" aria-hidden="true"></span>
-                  </label>
-                  <label class="btn btn-default active">
-                      <input type="radio" name="fontAlign" onchange="preview()" value="center" aria-label="Center Align" checked=""><span class="glyphicon glyphicon-align-center" aria-hidden="true"></span>
-                  </label>
-                  <label class="btn btn-default">
-                      <input type="radio" name="fontAlign" onchange="preview()" value="right" aria-label="Right Align"><span class="glyphicon glyphicon-align-right" aria-hidden="true"></span>
-                  </label>
-              </div>
+            <div id="fontSettings" class="collapse show" aria-labelledby="fontSettingsHead" data-parent="#accordion">
+              <div class="card-body">
+                <div class="form-row">
+                  <div class="form-group col-lg-8">
+                    <label for="fontFamily">Font:</label>
+                    <select class="form-control" id="fontFamily" onChange="updateFontStyles()">
+                    </select>
+                  </div>
+                  <div class="form-group col-lg-4">
+                    <label for="fontStyle">Style:</label>
+                    <select class="form-control" id="fontStyle" onChange="preview()">
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-lg-6 mb-0">
+                    <label for="fontSize" >Font Size:</label>
+                    <input id="fontSize" class="form-control" type="number" min="1" value="{{ label['DEFAULT_FONT_SIZE'] }}" onChange="preview()" required>
+                  </div>
+                  <div class="form-group col-lg-6 mb-0">
+                    <label for="fontAlign" class="control-label input-group">Font Alignment:</label>
+                    <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                      <label class="btn btn-secondary">
+                        <input type="radio" name="fontAlign" onchange="preview()" value="left" aria-label="Left Align">
+                        <i class="fas fa-align-left" aria-hidden="true"></i>
+                      </label>
+                      <label class="btn btn-secondary active">
+                        <input type="radio" name="fontAlign" onchange="preview()" value="center" aria-label="Center Align" checked="">
+                        <i class="fas fa-align-center" aria-hidden="true"></i>
+                      </label>
+                      <label class="btn btn-secondary">
+                        <input type="radio" name="fontAlign" onchange="preview()" value="right" aria-label="Right Align">
+                        <i class="fas fa-align-right" aria-hidden="true"></i>
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div> <!-- class="chooser panel-body" -->
             </div>
           </div>
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              <h4 class="panel-title">
-                <a data-toggle="collapse" data-parent="#accordion" href="#collapse3">
-                  <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                  Detailed Settings
-                </a>
-              </h4>
+          <div class="card">
+            <div class="card-header" data-toggle="collapse" data-target="#detailedSettings" id="#detailedSettingsHead">
+              <h5 class="mb-0">
+                <i class="mr-2 fas fa-cog" aria-hidden="true"></i>
+                Detailed Settings
+              </h5>
             </div>
-            <div id="collapse3" class="panel-collapse collapse">
-              <div class="chooser panel-body">
-              <label for="marginTop">Margin Top:</label>
-              <div class="input-group marginsTopBottom">
-                <input id="marginTop" class="form-control" type="number" min="0" max="200" value="24" onChange="preview()" required>    <span class="input-group-addon">%</span>
-              </div>
-              <label for="marginBottom">Margin Bottom:</label>
-              <div class="input-group marginsTopBottom">
-                <input id="marginBottom" class="form-control" type="number" min="0" max="200" value="45" onChange="preview()" required> <span class="input-group-addon">%</span>
-              </div>
-              <label for="marginLeft">Margin Left:</label>
-              <div class="input-group marginsLeftRight">
-                <input id="marginLeft" class="form-control" type="number" min="0" max="200" value="35" onChange="preview()" required>   <span class="input-group-addon">%</span>
-              </div>
-              <label for="marginRight">Margin Right:</label>
-              <div class="input-group marginsLeftRight">
-                <input id="marginRight" class="form-control" type="number" min="0" max="200" value="35" onChange="preview()" required>  <span class="input-group-addon">%</span>
-              </div>
+            <div id="detailedSettings" class="collapse" aria-labelledby="detailedSettingsHead" data-parent="#accordion">
+              <div class="card-body">
+                <div class="form-row">
+                  <div class="form-group col-lg-3">
+                  </div>
+                  <div class="form-group col-lg-6">
+                    <label class="text-center w-100" for="marginTop">Margin Top:</label>
+                    <div class="input-group marginsTopBottom">
+                      <input id="marginTop" class="form-control" type="number" min="0" max="200" value="24" onChange="preview()" required>
+                      <div class="input-group-append">
+                        <span class="input-group-text">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-lg-6">
+                    <label class="text-center w-100" for="marginLeft">Margin Left:</label>
+                    <div class="input-group marginsLeftBottom">
+                      <input id="marginLeft" class="form-control" type="number" min="0" max="200" value="35" onChange="preview()" required>
+                      <div class="input-group-append">
+                        <span class="input-group-text">%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-group col-lg-6">
+                    <label class="text-center w-100" for="marginRight">Margin Right:</label>
+                    <div class="input-group marginsRightBottom">
+                      <input id="marginRight" class="form-control" type="number" min="0" max="200" value="35" onChange="preview()" required>
+                      <div class="input-group-append">
+                        <span class="input-group-text">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-lg-3">
+                  </div>
+                  <div class="form-group col-lg-6">
+                    <label class="text-center w-100" for="marginBottom">Margin Bottom:</label>
+                    <div class="input-group marginsBottomBottom">
+                      <input id="marginBottom" class="form-control" type="number" min="0" max="200" value="45" onChange="preview()" required>
+                      <div class="input-group-append">
+                        <span class="input-group-text">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div> <!-- class="chooser panel-body" -->
             </div>
           </div>
@@ -105,25 +146,50 @@
     </div>
     <div class="col-md-4">
       <fieldset class="form-group">
-        <label for="labelText">Label Text:</label>
-        <textarea rows="7" id="labelText" class="form-control" onChange="preview()" onInput="preview()"></textarea>
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <label for="labelText" class="mb-0">
+                <i class="mr-2 fas fa-paragraph" aria-hidden="true"></i>
+                Label Text
+              </label>
+            </h5>
+          </div>
+          <div class="card-body">
+            <textarea rows="7" id="labelText" class="form-control" onChange="preview()" onInput="preview()"></textarea>
+          </div>
+        </div>
       </fieldset>
     </div>
     <div class="col-md-4">
-      <fieldset class="form-group">
-        <label for="previewImg">Label Preview:</label><br />
-        <img id="previewImg" style="border: 1px solid #444; max-height: 350px; width: auto; max-width: 100%; margin-bottom: 10px;"/>
-        <p>Printed size w/o margins: <span id="labelWidth">?</span> cm x <span id="labelHeight">?</span> cm</p>
-        <button id="printButton" type="button" class="btn btn-primary btn-block btn-lg" onClick="print()">
-          <span class="glyphicon glyphicon-print" aria-hidden="true"></span> Print
-        </button>
-      </fieldset>
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h3 class="panel-title"><span class="glyphicon glyphicon-console" aria-hidden="true" style="margin-right: 0.3em"></span> Status</h3>
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="mr-2 fas fa-image" aria-hidden="true"></i>
+            Preview
+          </h5>
         </div>
-        <div id="statusPanel" class="panel-body">
-          - undefined -
+        <div class="card-body">
+          <img id="previewImg" style="border: 1px solid #444; max-height: 350px; width: auto; max-width: 100%; margin-bottom: 10px;"/>
+          <br />
+          Printed size w/o margins: <span id="labelWidth">?</span> cm x <span id="labelHeight">?</span> cm
+        </div>
+      </div>
+      <button id="printButton" type="button" class="btn btn-primary btn-block btn-lg mb-3" onClick="print()">
+        <span class="fas fa-print" aria-hidden="true"></span> Print
+      </button>
+      <div class="card mb-5">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="mr-2 fas fa-info-circle" aria-hidden="true"></i>
+            Status
+          </h5>
+        </div>
+        <div class="card-body">
+          <div id="statusBox" class="alert alert-secondary" role="alert">
+            <span class="pl-0 fas fa-chevron-circle-right" aria-hidden="true"></span>
+            <span id="statusMessage">Nothing printed yet.</span>
+          </div>
         </div>
       </div>
     </div>
@@ -179,10 +245,15 @@ function preview() {
 }
 
 function setStatus(data) {
-  if (data['success'])
-    $('#statusPanel').html('<div id="statusBox" class="alert alert-success" role="alert"><i class="glyphicon glyphicon-check"></i><span>Printing was successful.</span></div>');
-  else
-    $('#statusPanel').html('<div id="statusBox" class="alert alert-warning" role="alert"><i class="glyphicon glyphicon-alert"></i><span>Printing was unsuccessful:<br />'+data['message']+'</span></div>');
+  if (data['success']) {
+    $('#statusBox').attr('class', 'alert alert-secondary');
+    $('#statusBox .fas').attr('class', 'pl-0 fas fa-chevron-circle-right');
+    $('#statusMessage').text("Success.");
+  } else {
+    $('#statusBox').attr('class', 'alert alert-warning');
+    $('#statusBox .fas').attr('class', 'pl-0 fas fa-exclamation-circle');
+    $('#statusMessage').text(data['message']);
+  }
   $('#printButton').prop('disabled', false);
 }
 
@@ -206,7 +277,9 @@ function updateFontStyles() {
 
 function print() {
   $('#printButton').prop('disabled', true);
-  $('#statusPanel').html('<div id="statusBox" class="alert alert-info" role="alert"><i class="glyphicon glyphicon-hourglass"></i><span>Processing print request...</span></div>');
+  $('#statusBox').attr('class', 'alert alert-info');
+  $('#statusBox .fas').attr('class', 'pl-0 fas fa-hourglass');
+  $('#statusMessage').text("Processing print request...");
   $.ajax({
     type:     'POST',
     dataType: 'json',
