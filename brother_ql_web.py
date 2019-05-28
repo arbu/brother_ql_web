@@ -15,7 +15,7 @@ from brother_ql.devicedependent import ENDLESS_LABEL, DIE_CUT_LABEL, ROUND_DIE_C
 from brother_ql import BrotherQLRaster, create_label
 from brother_ql.backends import backend_factory, guess_backend
 
-from font_helpers import get_fonts
+import fontconfig
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +40,9 @@ def serve_static(filename):
 @route('/labeldesigner')
 @view('labeldesigner.jinja2')
 def labeldesigner():
-    font_family_names = sorted(list(FONTS.keys()))
-    return {'font_family_names': font_family_names,
-            'fonts': FONTS,
+    font_info = [(i, font[1], font[2]) for i, font in enumerate(CONFIG['FONTS'])]
+    return {'font_info': json.dumps(font_info),
+            'default_font': CONFIG['LABEL']['DEFAULT_FONT'],
             'label_sizes': LABEL_SIZES,
             'website': CONFIG['WEBSITE'],
             'label': CONFIG['LABEL']}
@@ -52,13 +52,9 @@ def get_label_context(request):
 
     d = request.params.decode() # UTF-8 decoded form data
 
-    font_family = d.get('font_family').rpartition('(')[0].strip()
-    font_style  = d.get('font_family').rpartition('(')[2].rstrip(')')
     context = {
       'text':          d.get('text', None),
       'font_size': int(d.get('font_size', 100)),
-      'font_family':   font_family,
-      'font_style':    font_style,
       'label_size':    d.get('label_size', "62"),
       'kind':          label_type_specs[d.get('label_size', "62")]['kind'],
       'margin':    int(d.get('margin', 10)),
@@ -75,26 +71,17 @@ def get_label_context(request):
     context['margin_left']   = int(context['font_size']*context['margin_left'])
     context['margin_right']  = int(context['font_size']*context['margin_right'])
 
-    def get_font_path(font_family_name, font_style_name):
-        try:
-            if font_family_name is None or font_style_name is None:
-                font_family_name = CONFIG['LABEL']['DEFAULT_FONTS']['family']
-                font_style_name =  CONFIG['LABEL']['DEFAULT_FONTS']['style']
-            font_path = FONTS[font_family_name][font_style_name]
-        except KeyError:
-            raise LookupError("Couln't find the font & style")
-        return font_path
+    try:
+        font_index = int(d.get('font_index', CONFIG['LABEL']['DEFAULT_FONT']))
+        context['font_path'] = CONFIG['FONTS'][font_index][0]
+    except KeyError:
+        raise LookupError("Couln't find the font")
 
-    context['font_path'] = get_font_path(context['font_family'], context['font_style'])
+    try:
+        width, height = label_type_specs[context['label_size']]['dots_printable']
+    except KeyError:
+        raise LookupError("Unknown label_size")
 
-    def get_label_dimensions(label_size):
-        try:
-            ls = label_type_specs[context['label_size']]
-        except KeyError:
-            raise LookupError("Unknown label_size")
-        return ls['dots_printable']
-
-    width, height = get_label_dimensions(context['label_size'])
     if height > width: width, height = height, width
     if context['orientation'] == 'rotated': height, width = width, height
     context['width'], context['height'] = width, height
@@ -213,11 +200,12 @@ def print_text():
     return return_dict
 
 def main():
-    global DEBUG, FONTS, BACKEND_CLASS, CONFIG
+    global DEBUG, BACKEND_CLASS, CONFIG
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', default=False)
     parser.add_argument('--loglevel', type=lambda x: getattr(logging, x.upper()), default=False)
-    parser.add_argument('--font-folder', default=False, help='folder for additional .ttf/.otf fonts')
+    parser.add_argument('--font-folder', action="append", help='Specify additional folders for additional .ttf/.otf fonts.')
+    parser.add_argument('--no-system-fonts', action="store_true", help='Do not search system folders for fonts.')
     parser.add_argument('--default-label-size', default=False, help='Label size inserted in your printer. Defaults to 62.')
     parser.add_argument('--default-orientation', default=False, choices=('standard', 'rotated'), help='Label orientation, defaults to "standard". To turn your text by 90°, state "rotated".')
     parser.add_argument('--model', default=False, choices=models, help='The model of your printer (default: QL-500)')
@@ -251,10 +239,9 @@ def main():
     if args.default_orientation:
         CONFIG['LABEL']['DEFAULT_ORIENTATION'] = args.default_orientation
 
-    if args.font_folder:
-        ADDITIONAL_FONT_FOLDER = args.font_folder
-    else:
-        ADDITIONAL_FONT_FOLDER = CONFIG['SERVER']['ADDITIONAL_FONT_FOLDER']
+    ADDITIONAL_FONT_FOLDERS = (args.font_folder or []) + (CONFIG['SERVER']['ADDITIONAL_FONT_FOLDERS'] or [])
+
+    NO_SYSTEM_FONTS = args.no_system_fonts or CONFIG['SERVER']['NO_SYSTEM_FONTS']
 
 
     logging.basicConfig(level=LOGLEVEL)
@@ -268,27 +255,38 @@ def main():
     if CONFIG['LABEL']['DEFAULT_SIZE'] not in label_sizes:
         parser.error("Invalid --default-label-size. Please choose on of the following:\n:" + " ".join(label_sizes))
 
-    FONTS = get_fonts()
-    if ADDITIONAL_FONT_FOLDER:
-        FONTS.update(get_fonts(ADDITIONAL_FONT_FOLDER))
+    if NO_SYSTEM_FONTS:
+        fc = fontconfig.Config.create()
+    else:
+        fc = fontconfig.Config.get_current()
+    if ADDITIONAL_FONT_FOLDERS:
+        for folder in ADDITIONAL_FONT_FOLDERS:
+            fc.app_font_add_dir(folder)
 
-    if not FONTS:
+    props = fontconfig.PROP.FILE, fontconfig.PROP.FAMILY, fontconfig.PROP.STYLE
+    CONFIG['FONTS'] = []
+    for font in fc.font_list(fontconfig.Pattern.create(), props):
+        CONFIG['FONTS'].append(tuple(font.get(prop, 0)[0] for prop in props))
+
+    CONFIG['FONTS'].sort(key = lambda font: font[1:])
+
+    if not CONFIG['FONTS']:
         sys.stderr.write("Not a single font was found on your system. Please install some or use the \"--font-folder\" argument.\n")
         sys.exit(2)
 
-    for font in CONFIG['LABEL']['DEFAULT_FONTS']:
-        try:
-            FONTS[font['family']][font['style']]
-            CONFIG['LABEL']['DEFAULT_FONTS'] = font
-            logger.debug("Selected the following default font: {}".format(font))
+    for default_font in CONFIG['LABEL'].get('DEFAULT_FONTS', ()):
+        for i, font in enumerate(CONFIG['FONTS']):
+            if default_font['family'] == font[1] and default_font['style'] == font[2]:
+                CONFIG['LABEL']['DEFAULT_FONT'] = i
+                logger.debug("Selected the following default font: {}".format(font))
+                break
+        if 'DEFAULT_FONT' in CONFIG['LABEL']:
             break
-        except: pass
-    if CONFIG['LABEL']['DEFAULT_FONTS'] is None:
+    else:
         sys.stderr.write('Could not find any of the default fonts. Choosing a random one.\n')
-        family =  random.choice(list(FONTS.keys()))
-        style =   random.choice(list(FONTS[family].keys()))
-        CONFIG['LABEL']['DEFAULT_FONTS'] = {'family': family, 'style': style}
-        sys.stderr.write('The default font is now set to: {family} ({style})\n'.format(**CONFIG['LABEL']['DEFAULT_FONTS']))
+        CONFIG['LABEL']['DEFAULT_FONT'] = random.randint(0, len(CONFIG['FONTS']))
+        sys.stderr.write('The default font is now set to: {1} ({2})\n'.format(*CONFIG['FONTS'][CONFIG['LABEL']['DEFAULT_FONT']]))
+
 
     run(host=CONFIG['SERVER']['HOST'], port=PORT, debug=DEBUG)
 

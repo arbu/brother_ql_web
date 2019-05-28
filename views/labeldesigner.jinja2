@@ -48,12 +48,10 @@
             <div id="collapse2" class="panel-collapse collapse in">
               <div class="chooser panel-body">
               <label for="fontFamily">Font Family:</label>
-              <select class="form-control" id="fontFamily" onChange="preview()">
-                {% for font_family_name in font_family_names %}
-                  {% for font_style in fonts[font_family_name].keys() %}
-                    <option>{{font_family_name}} ({{ font_style }})</option>
-                  {% endfor %}
-                {% endfor %}
+              <select class="form-control" id="fontFamily" onChange="updateFontStyles()">
+              </select>
+              <label for="fontStyle">Style:</label>
+              <select class="form-control" id="fontStyle" onChange="preview()">
               </select>
               <label for="fontSize" >Font Size:</label>
               <input id="fontSize" class="form-control" type="number" min="1" value="{{ label['DEFAULT_FONT_SIZE'] }}" onChange="preview()" required>
@@ -133,6 +131,9 @@
 {% endblock %}
 
 {% block javascript %}
+var fonts = {{ font_info|safe }};
+var font_families = [];
+var default_font = {{ default_font }};
 var text = $('#labelText');
 
 function formData() {
@@ -141,7 +142,7 @@ function formData() {
   if (text == '') text = ' ';
   return {
     text:        text,
-    font_family: $('#fontFamily option:selected').text(),
+    font_index:  $('#fontStyle option:selected').val(),
     font_size:   $('#fontSize').val(),
     label_size:  $('#labelSize option:selected').val(),
     align:       $('input[name=fontAlign]:checked').val(),
@@ -185,6 +186,24 @@ function setStatus(data) {
   $('#printButton').prop('disabled', false);
 }
 
+function updateFontStyles() {
+  var old_style = $('#fontStyle option:selected').text() || "Regular";
+  $('#fontStyle').find('option').remove();
+  $.each(font_families[$('#fontFamily option:selected').text()], function(i, info) {
+    $('#fontStyle').append($('<option>', {
+      text:     info[2],
+      value:    info[0],
+    }));
+    if(info[2] == old_style) {
+      $('#fontStyle').val(info[0]);
+      old_style = "";
+    }
+  });
+  if(old_style)
+    $('#fontStyle option[text="Regular"]').attr("selected", "selected");
+  preview();
+}
+
 function print() {
   $('#printButton').prop('disabled', true);
   $('#statusPanel').html('<div id="statusBox" class="alert alert-info" role="alert"><i class="glyphicon glyphicon-hourglass"></i><span>Processing print request...</span></div>');
@@ -198,6 +217,20 @@ function print() {
   });
 }
 
-preview()
+$.each(fonts, function(i, info) {
+  if(!font_families[info[1]]) {
+    font_families[info[1]] = [];
+    $('#fontFamily').append($('<option>', {
+      text:     info[1],
+    }));
+  }
+  font_families[info[1]].push(info);
+  if(info[0] == default_font)
+    $('#fontFamily option:contains("' + info[1] + '")').attr("selected", "selected");
+});
+
+updateFontStyles();
+
+$('#fontStyle').val(default_font);
 
 {% endblock %}

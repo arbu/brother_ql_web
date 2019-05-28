@@ -1,3 +1,4 @@
 brother_ql
 bottle
 jinja2
+git+git://github.com/ldo/python_fontconfig.git@master#egg=fontconfig
